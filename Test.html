@@ -1,0 +1,88 @@
+
+```html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminabstimmung</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+</head>
+<body style="font-family: Arial; text-align: center; padding: 20px;">
+    <h1>🗳️ Terminabstimmung</h1>
+
+    <form id="voteForm" onsubmit="return submitForm();">
+        <input type="text" id="name" placeholder="Dein Name" required><br><br>
+        <select id="termin" required>
+            <option value="">-- Termin wählen --</option>
+            <option value="2025-03-01">01.03.2025</option>
+            <option value="2025-03-05">05.03.2025</option>
+            <option value="2025-03-10">10.03.2025</option>
+        </select><br><br>
+        <button type="submit">Abstimmen</button>
+    </form>
+
+    <h2>📊 Umfrageergebnisse</h2>
+    <canvas id="resultsChart" width="400" height="200"></canvas>
+
+    <script>
+        // 🔑 Firebase konfigurieren
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvrFL7ZxasydKhGG25XNHpe3B-8U87HB4",
+            authDomain: "terminabstimmung-4b439.firebaseapp.com",
+            projectId: "terminabstimmung-4b439",
+            storageBucket: "terminabstimmung-4b439.firebasestorage.app",
+            messagingSenderId: "723289214641",
+            appId: "1:723289214641:web:780d29495dc00a6c0adc90",
+            measurementId: "G-29D5T0RB6K"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const voteCounts = {"2025-03-01": 0, "2025-03-05": 0, "2025-03-10": 0};
+        const ctx = document.getElementById('resultsChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["01.03.2025", "05.03.2025", "10.03.2025"],
+                datasets: [{
+                    label: 'Stimmen',
+                    data: Object.values(voteCounts),
+                    backgroundColor: ['#4CAF50', '#2196F3', '#FF9800']
+                }]
+            },
+            options: {scales: {y: {beginAtZero: true, stepSize: 1}}}
+        });
+
+        const updateChart = () => {
+            chart.data.datasets[0].data = Object.values(voteCounts);
+            chart.update();
+        };
+
+        const fetchVotes = async () => {
+            const snapshot = await db.collection("votes").get();
+            snapshot.forEach(doc => voteCounts[doc.data().termin]++);
+            updateChart();
+        };
+
+        const submitForm = async () => {
+            const name = document.getElementById('name').value.trim();
+            const termin = document.getElementById('termin').value;
+
+            if (!name || !termin) return alert("Bitte alle Felder ausfüllen.");
+
+            await db.collection("votes").add({ name, termin });
+            voteCounts[termin]++;
+            updateChart();
+            alert(`Danke ${name}! Du hast für den ${termin} abgestimmt.`);
+            document.getElementById("voteForm").reset();
+            return false;
+        };
+
+        fetchVotes();
+    </script>
+</body>
+</html>
